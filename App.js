@@ -1,18 +1,96 @@
 import { StatusBar } from "expo-status-bar";
-import { Text } from "react-native";
+import { Text, Alert } from "react-native";
 import styled from "@emotion/native";
 import { useState } from "react";
 import { FontAwesome } from "@expo/vector-icons";
 
 export default function App() {
   const [text, onChangeText] = useState("");
+  const [editingText, onChangeEditText] = useState();
   const [toggleBtn, setToggleBtn] = useState({
-    name: "",
-    onPress: false,
+    name: "Javascript",
+    onPress: true,
   });
+  const [lists, setLists] = useState([
+    {
+      id: 1,
+      toDo: "신나는 실행컨텍스트 공부",
+      category: "Javascript",
+      isDone: false,
+      isEdit: false,
+    },
+    {
+      id: 2,
+      toDo: "너무 좋은 ES6 최신문법 공부",
+      category: "Javascript",
+      isDone: false,
+      isEdit: false,
+    },
+  ]);
+  const [number, setNumber] = useState(3);
+
+  const list = {
+    id: number,
+    toDo: text,
+    category: toggleBtn.name,
+    isDone: false,
+    isEdit: false,
+  };
 
   const toggleHanler = (name) => {
     setToggleBtn({ ...toggleBtn, name: name, onPress: true });
+  };
+
+  const plusToDo = () => {
+    setLists([...lists, { ...list }]);
+    setNumber(number + 1);
+    onChangeText("");
+  };
+
+  const deleteToDo = (id) => {
+    const newList = lists.filter((list) => list.id !== id);
+    Alert.alert("삭제", "삭제하시겠습니까?", [
+      {
+        text: "삭제",
+        onPress: () => setLists(newList),
+      },
+      {
+        text: "취소",
+      },
+    ]);
+  };
+
+  const changeDoneHandler = (id) => {
+    const newList = lists.map((list) => {
+      if (list.id === id) {
+        return { ...list, isDone: !list.isDone };
+      } else {
+        return { ...list };
+      }
+    });
+    setLists(newList);
+  };
+
+  const editHandler = (id) => {
+    const editText = lists.map((list) => {
+      if (list.id === id) {
+        return { ...list, isEdit: !list.isEdit };
+      } else {
+        return { ...list };
+      }
+    });
+    setLists(editText);
+  };
+
+  const editToDo = (id) => {
+    const editText = lists.map((list) => {
+      if (list.id === id) {
+        return { ...list, toDo: editingText ? editingText : list.toDo, isEdit: false };
+      } else {
+        return { ...list };
+      }
+    });
+    setLists(editText);
   };
 
   return (
@@ -28,37 +106,34 @@ export default function App() {
           <Text>Coding Test</Text>
         </StToggleBtn>
       </StBtnBox>
-      <StTextInput placeholder="할일을 입력해주세요" onChangeText={onChangeText} value={text} />
+      <StTextInput placeholder="할일을 입력해주세요" onChangeText={onChangeText} onSubmitEditing={plusToDo} value={text} />
       <StatusBar style="auto" />
       <StScrollView>
-        <TodoList>
-          <Text>신나는 실행컨텍스트 공부</Text>
-          <TDLBtnBox>
-            <TDLBtn>
-              <FontAwesome name="check-square" size={33} color="black" />
-            </TDLBtn>
-            <TDLBtn>
-              <FontAwesome name="pencil-square" size={33} color="black" />
-            </TDLBtn>
-            <TDLBtn>
-              <FontAwesome name="trash" size={33} color="black" />
-            </TDLBtn>
-          </TDLBtnBox>
-        </TodoList>
-        <TodoList>
-          <Text>너무 좋은 ES6 최신문법 공부</Text>
-          <TDLBtnBox>
-            <TDLBtn>
-              <FontAwesome name="check-square" size={33} color="black" />
-            </TDLBtn>
-            <TDLBtn>
-              <FontAwesome name="pencil-square" size={33} color="black" />
-            </TDLBtn>
-            <TDLBtn>
-              <FontAwesome name="trash" size={33} color="black" />
-            </TDLBtn>
-          </TDLBtnBox>
-        </TodoList>
+        {lists.map((x) => {
+          if (toggleBtn.name === x.category) {
+            return (
+              <TodoList key={x.id}>
+                <DisplayView display={x.isEdit === true ? "none" : "flex"}>
+                  <Text style={{ textDecorationLine: `${x.isDone ? "line-through" : "none"}` }}>{x.toDo}</Text>
+                </DisplayView>
+                <DisplayView display={x.isEdit === true ? "flex" : "none"}>
+                  <StEditInput onChangeText={onChangeEditText} onSubmitEditing={() => editToDo(x.id)} defaultValue={x.toDo} />
+                </DisplayView>
+                <TDLBtnBox>
+                  <TDLBtn onPress={() => changeDoneHandler(x.id)}>
+                    <FontAwesome name="check-square" size={33} color="black" />
+                  </TDLBtn>
+                  <TDLBtn onPress={() => editHandler(x.id)}>
+                    <FontAwesome name="pencil-square" size={33} color="black" />
+                  </TDLBtn>
+                  <TDLBtn onPress={() => deleteToDo(x.id)}>
+                    <FontAwesome name="trash" size={33} color="black" />
+                  </TDLBtn>
+                </TDLBtnBox>
+              </TodoList>
+            );
+          }
+        })}
       </StScrollView>
     </StView>
   );
@@ -111,6 +186,15 @@ const TodoList = styled.View`
   width: 100%;
   height: 50px;
   background-color: #d9d9d9;
+`;
+
+const DisplayView = styled.View`
+  display: ${(x) => x.display};
+`;
+
+const StEditInput = styled.TextInput`
+  background: white;
+  width: 250px;
 `;
 
 const TDLBtnBox = styled.View`
