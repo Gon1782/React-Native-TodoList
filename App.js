@@ -1,58 +1,105 @@
 import { StatusBar } from "expo-status-bar";
 import { Text, Alert } from "react-native";
 import styled from "@emotion/native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FontAwesome } from "@expo/vector-icons";
+import { db } from "./firebase";
+import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc } from "firebase/firestore";
+import { v4 as uuidv4 } from "uuid";
 
 export default function App() {
   const [text, onChangeText] = useState("");
   const [editingText, onChangeEditText] = useState();
+
+  // 카테고리 토글
   const [toggleBtn, setToggleBtn] = useState({
     name: "Javascript",
     onPress: true,
   });
-  const [lists, setLists] = useState([
-    {
-      id: 1,
-      toDo: "신나는 실행컨텍스트 공부",
-      category: "Javascript",
-      isDone: false,
-      isEdit: false,
-    },
-    {
-      id: 2,
-      toDo: "너무 좋은 ES6 최신문법 공부",
-      category: "Javascript",
-      isDone: false,
-      isEdit: false,
-    },
-  ]);
-  const [number, setNumber] = useState(3);
-
-  const list = {
-    id: number,
-    toDo: text,
-    category: toggleBtn.name,
-    isDone: false,
-    isEdit: false,
-  };
 
   const toggleHanler = (name) => {
     setToggleBtn({ ...toggleBtn, name: name, onPress: true });
   };
 
-  const plusToDo = () => {
-    setLists([...lists, { ...list }]);
-    setNumber(number + 1);
-    onChangeText("");
+  // GET Data
+  const [lists, setLists] = useState([]);
+
+  const getList = async () => {
+    let data = [];
+    const q = query(collection(db, "ToDoList"), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((x) => {
+      const Obj = {
+        id: x.id,
+        ...x.data(),
+      };
+      data.push(Obj);
+    });
+    setLists(data);
   };
 
+  useEffect(() => {
+    getList();
+  }, []);
+
+  // POST
+  let now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth() + 1;
+  let day = now.getDate();
+  let hour = now.getHours();
+  let minute = now.getMinutes();
+
+  const plusToDo = async () => {
+    let id = uuidv4();
+    const docRef = doc(db, "ToDoList", `${id}`);
+    try {
+      await setDoc(docRef, {
+        id: id,
+        createdAt: `${year}.${month}.${day} ${hour > 9 ? hour : "0" + hour}:${minute > 9 ? minute : "0" + minute}`,
+        toDo: text,
+        category: toggleBtn.name,
+        isDone: false,
+      });
+      onChangeText("");
+      getList();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // 수정
+  const [editToggle, setEditToggle] = useState({
+    id: 0,
+    onEdit: false,
+  });
+
+  const editHandler = (id) => {
+    setEditToggle({ ...editToggle, id: id, isEdit: true });
+  };
+
+  const editToDo = async (id) => {
+    const listRef = doc(db, "ToDoList", id);
+    try {
+      await updateDoc(listRef, { toDo: editingText });
+      setEditToggle({ ...editToggle, id: 0, isEdit: false });
+      getList();
+    } catch (error) {}
+  };
+
+  // 삭제
   const deleteToDo = (id) => {
-    const newList = lists.filter((list) => list.id !== id);
     Alert.alert("삭제", "삭제하시겠습니까?", [
       {
         text: "삭제",
-        onPress: () => setLists(newList),
+        onPress: async () => {
+          try {
+            await deleteDoc(doc(db, "ToDoList", id));
+            getList();
+          } catch (error) {
+            alert(error);
+          }
+        },
       },
       {
         text: "취소",
@@ -60,37 +107,14 @@ export default function App() {
     ]);
   };
 
-  const changeDoneHandler = (id) => {
-    const newList = lists.map((list) => {
-      if (list.id === id) {
-        return { ...list, isDone: !list.isDone };
-      } else {
-        return { ...list };
-      }
-    });
-    setLists(newList);
-  };
-
-  const editHandler = (id) => {
-    const editText = lists.map((list) => {
-      if (list.id === id) {
-        return { ...list, isEdit: !list.isEdit };
-      } else {
-        return { ...list };
-      }
-    });
-    setLists(editText);
-  };
-
-  const editToDo = (id) => {
-    const editText = lists.map((list) => {
-      if (list.id === id) {
-        return { ...list, toDo: editingText ? editingText : list.toDo, isEdit: false };
-      } else {
-        return { ...list };
-      }
-    });
-    setLists(editText);
+  // 완료
+  const changeDoneHandler = async (id) => {
+    const listRef = doc(db, "ToDoList", id);
+    let list = await getDoc(listRef);
+    try {
+      await updateDoc(listRef, { isDone: !list.data().isDone });
+      getList();
+    } catch (error) {}
   };
 
   return (
@@ -113,10 +137,10 @@ export default function App() {
           if (toggleBtn.name === x.category) {
             return (
               <TodoList key={x.id}>
-                <DisplayView display={x.isEdit === true ? "none" : "flex"}>
+                <DisplayView display={editToggle.isEdit && editToggle.id === x.id ? "none" : "flex"}>
                   <Text style={{ textDecorationLine: `${x.isDone ? "line-through" : "none"}` }}>{x.toDo}</Text>
                 </DisplayView>
-                <DisplayView display={x.isEdit === true ? "flex" : "none"}>
+                <DisplayView display={editToggle.isEdit && editToggle.id === x.id ? "flex" : "none"}>
                   <StEditInput onChangeText={onChangeEditText} onSubmitEditing={() => editToDo(x.id)} defaultValue={x.toDo} />
                 </DisplayView>
                 <TDLBtnBox>
