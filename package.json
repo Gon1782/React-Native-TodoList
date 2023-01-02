@@ -11,13 +11,18 @@
   "dependencies": {
     "@emotion/native": "^11.10.0",
     "@emotion/react": "^11.10.5",
+    "@reduxjs/toolkit": "^1.9.1",
     "eas-cli": "^3.1.1",
     "expo": "~47.0.9",
     "expo-status-bar": "~1.4.2",
     "expo-updates": "~0.15.6",
     "firebase": "^9.15.0",
     "react": "18.1.0",
-    "react-native": "0.70.5"
+    "react-native": "0.70.5",
+    "react-redux": "^8.0.5",
+    "react-redux-firebase": "^3.11.0",
+    "redux": "^4.2.0",
+    "redux-thunk": "^2.4.2"
   },
   "devDependencies": {
     "@babel/core": "^7.12.9"
