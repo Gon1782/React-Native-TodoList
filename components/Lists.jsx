@@ -1,19 +1,38 @@
 import { Text, Alert } from "react-native";
 import styled from "@emotion/native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FontAwesome } from "@expo/vector-icons";
 import { db } from "../firebase";
-import { deleteDoc, doc, getDoc, updateDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, updateDoc, query, collection, orderBy, onSnapshot } from "firebase/firestore";
 import { useDispatch, useSelector } from "react-redux";
 import { offEdit, toggleEdit } from "../redux/modules/editSlice";
 
-const Lists = ({ getList, lists }) => {
+const Lists = () => {
   const dispatch = useDispatch();
   const tabName = useSelector((state) => state.tab.name);
   const edit = useSelector((state) => state.edit);
-  const [editingText, onChangeEditText] = useState();
+  
+  // GET 
+  const [lists, setLists] = useState([]);
+
+  useEffect(() => {
+    const q = query(collection(db, "ToDoList"), orderBy("createdAt", "desc"));
+
+    onSnapshot(q, (snapshot) => {
+      const newLists = snapshot.docs.map((doc) => {
+        const newList = {
+          id: doc.id,
+          ...doc.data(),
+        }
+        return newList
+      })
+      setLists(newLists)
+    })
+  }, []);
 
   // 수정
+  const [editingText, onChangeEditText] = useState();
+
   const editHandler = (id, value) => {
     onChangeEditText(value)
     dispatch(toggleEdit(id));
@@ -24,7 +43,6 @@ const Lists = ({ getList, lists }) => {
     try {
       await updateDoc(listRef, { toDo: editingText });
       dispatch(offEdit(id));
-      getList();
     } catch (error) {
       console.log(error);
     }
@@ -38,7 +56,6 @@ const Lists = ({ getList, lists }) => {
         onPress: async () => {
           try {
             await deleteDoc(doc(db, "ToDoList", id));
-            getList();
           } catch (error) {
             alert(error);
           }
@@ -56,7 +73,6 @@ const Lists = ({ getList, lists }) => {
     let list = await getDoc(listRef);
     try {
       await updateDoc(listRef, { isDone: !list.data().isDone });
-      getList();
     } catch (error) {}
   };
 
