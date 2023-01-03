@@ -14,7 +14,8 @@ const Lists = ({ getList, lists }) => {
   const [editingText, onChangeEditText] = useState();
 
   // 수정
-  const editHandler = (id) => {
+  const editHandler = (id, value) => {
+    onChangeEditText(value)
     dispatch(toggleEdit(id));
   };
 
@@ -75,7 +76,7 @@ const Lists = ({ getList, lists }) => {
                 <TDLBtn onPress={() => changeDoneHandler(x.id)}>
                   <FontAwesome name="check-square" size={33} color="black" />
                 </TDLBtn>
-                <TDLBtn onPress={() => editHandler(x.id)}>
+                <TDLBtn onPress={() => editHandler(x.id, x.toDo)}>
                   <FontAwesome name="pencil-square" size={33} color="black" />
                 </TDLBtn>
                 <TDLBtn onPress={() => deleteToDo(x.id)}>
